@@ -1,0 +1,152 @@
+package com.example.hotelbooking;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.*;
+import java.util.List;
+
+@SpringBootApplication
+public class HotelBookingApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(HotelBookingApplication.class, args);
+    }
+}
+
+@Entity
+class Hotel {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private String location;
+    private int availableRooms;
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public int getAvailableRooms() {
+        return availableRooms;
+    }
+
+    public void setAvailableRooms(int availableRooms) {
+        this.availableRooms = availableRooms;
+    }
+}
+
+@Entity
+class Booking {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private Long hotelId;
+    private String guestName;
+    private int numberOfRooms;
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getHotelId() {
+        return hotelId;
+    }
+
+    public void setHotelId(Long hotelId) {
+        this.hotelId = hotelId;
+    }
+
+    public String getGuestName() {
+        return guestName;
+    }
+
+    public void setGuestName(String guestName) {
+        this.guestName = guestName;
+    }
+
+    public int getNumberOfRooms() {
+        return numberOfRooms;
+    }
+
+    public void setNumberOfRooms(int numberOfRooms) {
+        this.numberOfRooms = numberOfRooms;
+    }
+}
+
+interface HotelRepository extends JpaRepository<Hotel, Long> {}
+
+interface BookingRepository extends JpaRepository<Booking, Long> {}
+
+@RestController
+@RequestMapping("/hotels")
+class HotelController {
+    @Autowired
+    private HotelRepository hotelRepository;
+
+    @GetMapping
+    public List<Hotel> getAllHotels() {
+        return hotelRepository.findAll();
+    }
+
+    @PostMapping
+    public Hotel addHotel(@RequestBody Hotel hotel) {
+        return hotelRepository.save(hotel);
+    }
+}
+
+@RestController
+@RequestMapping("/bookings")
+class BookingController {
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private HotelRepository hotelRepository;
+
+    @PostMapping
+    public String bookRoom(@RequestBody Booking booking) {
+        Hotel hotel = hotelRepository.findById(booking.getHotelId()).orElse(null);
+        if (hotel != null && hotel.getAvailableRooms() >= booking.getNumberOfRooms()) {
+            hotel.setAvailableRooms(hotel.getAvailableRooms() - booking.getNumberOfRooms());
+            hotelRepository.save(hotel);
+            bookingRepository.save(booking);
+            return "Booking successful!";
+        } else {
+            return "Booking failed: Not enough rooms available.";
+        }
+    }
+
+    @GetMapping
+    public List<Booking> getAllBookings() {
+        return bookingRepository.findAll();
+    }
+}
