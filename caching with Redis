@@ -1,0 +1,51 @@
+import redis.clients.jedis.Jedis;
+
+public class RedisCachingExample {
+
+    private Jedis jedis;
+
+    public RedisCachingExample() {
+        // Connect to Redis server on localhost
+        this.jedis = new Jedis("localhost", 6379);
+    }
+
+    public void cacheData(String key, String value) {
+        // Store data in Redis cache
+        jedis.set(key, value);
+        System.out.println("Data cached with key: " + key);
+    }
+
+    public String getCachedData(String key) {
+        // Retrieve data from Redis cache
+        String value = jedis.get(key);
+        if (value != null) {
+            System.out.println("Retrieved cached data for key: " + key);
+        } else {
+            System.out.println("No data found for key: " + key);
+        }
+        return value;
+    }
+
+    public void closeConnection() {
+        // Close the Redis connection
+        jedis.close();
+    }
+
+    public static void main(String[] args) {
+        RedisCachingExample example = new RedisCachingExample();
+
+        // Cache some data
+        example.cacheData("user:1:name", "John Doe");
+        example.cacheData("user:1:email", "john.doe@example.com");
+
+        // Retrieve cached data
+        String userName = example.getCachedData("user:1:name");
+        String userEmail = example.getCachedData("user:1:email");
+
+        System.out.println("User Name: " + userName);
+        System.out.println("User Email: " + userEmail);
+
+        // Close the connection
+        example.closeConnection();
+    }
+}
