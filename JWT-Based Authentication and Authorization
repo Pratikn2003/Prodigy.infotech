@@ -1,0 +1,115 @@
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+@SpringBootApplication
+public class JwtAuthApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(JwtAuthApplication.class, args);
+    }
+}
+
+@RestController
+@RequestMapping("/api")
+class AuthController {
+    private final String SECRET_KEY = "my-secret-key";
+    private final Map<String, String> userStore = new HashMap<>();
+
+    public AuthController() {
+        // Mock user store (username -> password)
+        userStore.put("admin", "password123");
+        userStore.put("user", "user123");
+    }
+
+    // Endpoint for login and JWT generation
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody AuthRequest authRequest) {
+        String username = authRequest.getUsername();
+        String password = authRequest.getPassword();
+
+        if (userStore.containsKey(username) && userStore.get(username).equals(password)) {
+            String token = generateToken(username);
+            return ResponseEntity.ok(new AuthResponse("Login successful", token));
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+    }
+
+    // Protected endpoint (requires valid JWT)
+    @GetMapping("/protected")
+    public ResponseEntity<?> protectedEndpoint(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+
+        if (token == null || !token.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: No token provided");
+        }
+
+        token = token.substring(7); // Remove "Bearer " prefix
+
+        try {
+            String username = Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody().getSubject();
+            return ResponseEntity.ok("Welcome, " + username + "! This is a protected endpoint.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid or expired token");
+        }
+    }
+
+    // Helper method to generate JWT
+    private String generateToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // Token valid for 1 day
+                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .compact();
+    }
+}
+
+// Data model for login requests
+class AuthRequest {
+    private String username;
+    private String password;
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+}
+
+// Data model for login responses
+class AuthResponse {
+    private String message;
+    private String token;
+
+    public AuthResponse(String message, String token) {
+        this.message = message;
+        this.token = token;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public String getToken() {
+        return token;
+    }
+}
