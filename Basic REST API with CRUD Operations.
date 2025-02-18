@@ -1,1 +1,125 @@
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@SpringBootApplication
+public class CrudApiApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(CrudApiApplication.class, args);
+    }
+}
+
+@RestController
+@RequestMapping("/api/users")
+class UserController {
+    private final Map<String, User> userStore = new HashMap<>();
+
+    // Create a new user
+    @PostMapping
+    public ResponseEntity<?> createUser(@RequestBody User user) {
+        if (!isValidEmail(user.getEmail())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid email format.");
+        }
+
+        String id = UUID.randomUUID().toString();
+        user.setId(id);
+        userStore.put(id, user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(user);
+    }
+
+    // Get all users
+    @GetMapping
+    public ResponseEntity<?> getAllUsers() {
+        return ResponseEntity.ok(userStore.values());
+    }
+
+    // Get a user by ID
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable String id) {
+        User user = userStore.get(id);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+        }
+        return ResponseEntity.ok(user);
+    }
+
+    // Update a user by ID
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable String id, @RequestBody User updatedUser) {
+        User existingUser = userStore.get(id);
+        if (existingUser == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+        }
+
+        if (!isValidEmail(updatedUser.getEmail())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid email format.");
+        }
+
+        existingUser.setName(updatedUser.getName());
+        existingUser.setEmail(updatedUser.getEmail());
+        existingUser.setAge(updatedUser.getAge());
+        return ResponseEntity.ok(existingUser);
+    }
+
+    // Delete a user by ID
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable String id) {
+        User removedUser = userStore.remove(id);
+        if (removedUser == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+        }
+        return ResponseEntity.ok("User deleted successfully.");
+    }
+
+    // Helper method to validate email format
+    private boolean isValidEmail(String email) {
+        return email != null && email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
+    }
+}
+
+// User model
+class User {
+    private String id;
+    private String name;
+    private String email;
+    private int age;
+
+    // Getters and Setters
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+}
